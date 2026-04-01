@@ -15,6 +15,8 @@ When this skill is invoked, execute the following phases in order.
 # Phase 1 — Implement (GPT-5.4 mini, background sub-agent)
 
 1. Read `~/.copilot/session-state/<session-id>/plan.md`.
+   - If the file does not exist, stop and tell the user:
+     > ❌ No `plan.md` found. Please run the `saml-plan` skill first to create a plan.
 
 2. Launch a **background sub-agent** using model **`GPT-5.4 mini`** with
    the following prompt (fill in the placeholders):
@@ -30,7 +32,10 @@ When this skill is invoked, execute the following phases in order.
 
    Instructions:
    - Follow the plan step by step.
-   - After making all changes, run the existing tests and linter (if any).
+   - After making all changes, discover and run the existing tests and linter.
+     To find them, check (in order): Makefile targets, package.json scripts,
+     pom.xml (mvn test), build.gradle, or a CI config (e.g. .github/workflows/).
+     Run whatever is present; skip gracefully if nothing is found.
    - When done, provide a concise summary of: what was changed, which files
      were modified, and whether tests/linter passed or failed.
    ```
@@ -44,13 +49,13 @@ When this skill is invoked, execute the following phases in order.
 
 ## Phase 2 — Review-Fix Loop (Claude Sonnet 4.6 reviews, GPT-5.4 mini fixes)
 
-Repeat the following loop. Stop when the reviewer returns **PASS**, or after
-**3 iterations** (to avoid infinite loops) — in which case report remaining
-issues to the user.
+Track the iteration count (start at 1). Stop when the reviewer returns **PASS**,
+or after **3 iterations** (to avoid infinite loops) — in which case report
+remaining issues to the user.
 
 ### Review step
 
-Launch a sub-agent using model **`Claude Sonnet 4.6`** with this prompt:
+Launch a **background sub-agent** using model **`Claude Sonnet 4.6`** with this prompt:
 
 ```
 You are a senior code reviewer. Review the implementation in the working
@@ -62,8 +67,8 @@ Working directory: <cwd>
 Plan:
 <full contents of plan.md>
 
-Implementation summary from the implementor:
-<summary from Phase 2 or the most recent Fix step>
+Implementation summary from the implementor (iteration <current iteration> of 3):
+<summary from Phase 1 or the most recent Fix step>
 
 Instructions:
 - Examine the relevant changed files.
@@ -76,6 +81,8 @@ Instructions:
   or significant quality issues.
 ```
 
+Wait for the sub-agent to complete.
+
 ### Decision
 
 - If the reviewer returns **`PASS`**: go to Phase 3.
@@ -83,7 +90,7 @@ Instructions:
 
 ### Fix step
 
-Launch a sub-agent using model **`GPT-5.4 mini`** with this prompt:
+Launch a **background sub-agent** using model **`GPT-5.4 mini`** with this prompt:
 
 ```
 You are a software engineer fixing reviewer feedback. Address every issue
@@ -94,17 +101,22 @@ Working directory: <cwd>
 Original plan:
 <full contents of plan.md>
 
+Implementation summary so far:
+<summary from Phase 1 or the previous Fix step>
+
 Reviewer feedback:
 <FAIL message verbatim>
 
 Instructions:
 - Fix all issues raised by the reviewer.
-- Run the existing tests and linter after your changes.
+- Discover and run the existing tests and linter after your changes
+  (check Makefile, package.json scripts, pom.xml, build.gradle, or CI config).
 - Return a concise summary of what you changed and whether tests/linter
   passed or failed.
 ```
 
-After the Fix sub-agent completes, go back to the **Review step**.
+Wait for the sub-agent to complete. Increment the iteration counter, then go
+back to the **Review step**.
 
 ---
 
@@ -115,7 +127,7 @@ Report to the user:
 > ✅ **Done!** The reviewer approved the implementation.
 > Here's a summary: <PASS message from reviewer>
 >
-> Files changed: <list key files modified>
+> Files changed: <output of `git diff --name-only HEAD` in the working directory>
 
 If the loop hit the 3-iteration limit without passing, instead report:
 
