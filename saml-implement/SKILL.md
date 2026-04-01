@@ -1,5 +1,5 @@
 ---
-name: slee-implement
+name: saml-implement
 description: >
   Full implement → review cycle. Delegates implementation to `GPT-5.4 mini`,
   then runs a review-fix loop (`Claude Sonnet 4.6` reviews, `GPT-5.4 mini` fixes)
