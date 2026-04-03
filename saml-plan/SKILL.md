@@ -1,9 +1,9 @@
 ---
 name: saml-plan
 description: >
-  Enters plan mode to collaboratively write a plan.md with the user.
-parameters:
-  what: what to plan for
+  Collaboratively write plan.md with the user.
+  It guides the user through writing a detailed implementation plan.
+  This should be automtically triggered when the user asks for an implementation. Or, when the user asks `.plan.md` file to be created or modified.
 ---
 
 # Process
@@ -14,11 +14,9 @@ When this skill is invoked, execute the following phases in order.
 
 ## Phase 1 — Setup
 
-1. Switch into **plan mode**, if not already in plan mode. If you are unable to switch to plan mode, ask user to switch to plan mode before proceeding.
+1. Ask the user what they want to implement, if they have not already passed the **what** parameter. Use the `ask_user` tool to capture their response.
 
-2. Ask the user what they want to implement, if they have not already passed the **what** parameter. Use the `ask_user` tool to capture their response.
-
-3. Ask clarifying questions (one at a time via `ask_user`) to resolve ambiguity before writing the plan. Focus on:
+2. Ask clarifying questions (one at a time via `ask_user`) to resolve ambiguity before writing the plan. Focus on:
    - Feature scope and boundaries (what's in / out)
    - Behavioral choices (defaults, limits, error handling)
    - Implementation approach when multiple valid options exist
@@ -29,35 +27,26 @@ When this skill is invoked, execute the following phases in order.
 
 ## Phase 2 — Understand the Codebase
 
-4. Read `.github/copilot-instructions.md` if it exists to understand project conventions (build commands, test commands, folder structure).
-
-5. Launch a **sync explore sub-agent** to understand the parts of the codebase relevant to the planned work. Ask it to:
-   - Identify key files, classes, and functions involved
-   - Find existing patterns and conventions to follow
-   - Note anything that could affect implementation (interfaces, dependencies, existing tests)
-
-   Use its findings to ground the plan in concrete file paths, function names, and existing code patterns.
+3. Gather necessary knowledge of codebase to write the plan.
+   These files can help: `.github/copilot-instructions.md`, `AGENTS.md`, `CLAUDE.md` or other summary files.
+   If no relevant information is found, free to read codebase or ask the user to provide necessary info.
 
 ---
 
 ## Phase 3 — Write Plan
 
-6. Write a self-contained implementation plan to the session plan file:
-   `~/.copilot/session-state/<session-id>/plan.md`
+4. Write a self-contained implementation plan to the plan file: `./.plan.md`.
+   Overwrite any existing content.
+   The plan must be detailed enough for a less-capable model to execute in a new fresh context.
+   The plan should contain implementation detail for:
+   - Specific file paths and function names to create/modify.
 
-   The plan must be detailed enough for a less-capable model to execute
-   without any additional context. Include:
-   - A clear problem statement
-   - An ordered list of concrete steps (exact file paths, function names,
-     logic changes, and code snippets where helpful)
-   - Known risks and edge cases to watch out for
-   - How to run existing tests and linters to verify the changes
 
 ---
 
 ## Phase 4 — Review Plan
 
-7. Launch a **sync sub-agent** using model **`Claude Sonnet 4.6`** with the following prompt:
+4. Launch a **sync sub-agent** using model **`Claude Sonnet 4.6`** with the following prompt:
 
    ```
    You are a senior engineer reviewing an implementation plan.
@@ -65,11 +54,13 @@ When this skill is invoked, execute the following phases in order.
    Working directory: <cwd>
 
    Plan:
-   <full contents of plan.md>
+   <full contents of ./.plan.md>
 
    Assess the plan for:
    - Completeness: are all necessary steps present? Are file paths and function names concrete?
    - Correctness: does the approach make sense given the codebase?
+   - Succinctness: is the plan free of unnecessary steps or detail that doesn't add value?
+   - Simplicity: is the plan as straightforward as possible, without unnecessary complexity and overengineering?
    - Actionability: could a junior engineer follow this without additional context?
 
    Return exactly ONE of:
@@ -81,19 +72,11 @@ When this skill is invoked, execute the following phases in order.
    ```
 
    - If **PASS**: proceed to Phase 5.
-   - If **FAIL**: revise `plan.md` to address the issues, then re-run the review once more.
+   - If **FAIL**: go back to Phase 1, 2, or 3 to address the issues. Freely ask user additional clarifying questions. Freely make adjustments to `./.plan.md`, then re-run the review until it **PASS**es. However, do not loop more than 3 times to prevent infinite loops.
 
 ---
 
-## Phase 5 — Track Todos
+## Phase 5 — Done
 
-8. Parse the concrete steps from `plan.md` and insert them as todos into the SQL `todos` table using descriptive kebab-case IDs. Include enough detail in each `description` that the todo is self-contained. Insert dependencies into `todo_deps` for steps that must be done in order.
-
----
-
-## Phase 6 — Done
-
-9. Tell the user: **"✅ Plan written. Please review `plan.md` — you can edit
-   it directly (Ctrl+Y in plan mode). Let me know when you're happy with it
+5. Tell the user: **"✅ Plan written. Please review `./.plan.md`. Let me know when you're happy with it
    or what you'd like to change."**
-

@@ -1,9 +1,11 @@
 ---
 name: saml-implement
 description: >
-  Full implement → review cycle. Delegates implementation to `GPT-5.4 mini`,
-  then runs a review-fix loop (`Claude Sonnet 4.6` reviews, `GPT-5.4 mini` fixes)
+  Full implement → review cycle. Delegates implementation to a background subagent, then reviews its work with a more capable model.
+  If the review fails, it creates a fix plan and sends it back to the implementor for another iteration of implementation and review,
   until the review passes. Use this when asked to implement a feature end-to-end with automated review.
+
+  This assumes `./.plan.md` already exists (e.g. created by `saml-plan` skill) with a detailed implementation plan. If not, it will prompt the user to create one first.
 ---
 
 # Process
@@ -14,9 +16,9 @@ When this skill is invoked, execute the following phases in order.
 
 # Phase 1 — Implement (GPT-5.4 mini, background sub-agent)
 
-1. Read `~/.copilot/session-state/<session-id>/plan.md`.
+1. Read `./.plan.md`.
    - If the file does not exist, stop and tell the user:
-     > ❌ No `plan.md` found. Please run the `saml-plan` skill first to create a plan.
+     > ❌ No `./.plan.md` found. Please run the `saml-plan` skill first to create a plan.
 
 2. Launch a **background sub-agent** using model **`GPT-5.4 mini`** with
    the following prompt (fill in the placeholders):
@@ -65,7 +67,7 @@ edge cases, test coverage, and adherence to the plan.
 Working directory: <cwd>
 
 Plan:
-<full contents of plan.md>
+<full contents of ./.plan.md>
 
 Implementation summary from the implementor (iteration <current iteration> of 3):
 <summary from Phase 1 or the most recent Fix step>
@@ -75,11 +77,17 @@ Instructions:
 - Return exactly ONE of:
     PASS: <one-sentence summary of what was implemented>
   or
-    FAIL: <bullet list of specific issues to fix>
+    FAIL: <detailed fix plan written to `./.fix-plan.md`>
 - Do not suggest stylistic nitpicks unless they violate the project's
   stated conventions. Only flag genuine bugs, missing requirements,
   or significant quality issues.
+- Make sure tests are written as well. And tests are high production quality code.
+- Make sure code is simple and straightforward, without unnecessary complexity or overengineering.
 ```
+
+`./.fix-plan.md` will be created if the reviewer returns **FAIL**. It should contain a detailed
+fix plan that the implementor can follow to address the reviewer's concerns. It should be actionable, specific,
+and detailed enough for the implementor to make the necessary changes in a fresh new context without additional guidance.
 
 Wait for the sub-agent to complete.
 
@@ -105,7 +113,7 @@ Implementation summary so far:
 <summary from Phase 1 or the previous Fix step>
 
 Reviewer feedback:
-<FAIL message verbatim>
+<full contents of ./.fix-plan.md>
 
 Instructions:
 - Fix all issues raised by the reviewer.
@@ -134,5 +142,5 @@ If the loop hit the 3-iteration limit without passing, instead report:
 > ⚠️ The review-fix loop reached 3 iterations without a clean pass.
 > Remaining issues:
 > <last FAIL message>
-> Please review manually or run `/slee-review` to continue the loop.
+> Please review manually.
 
