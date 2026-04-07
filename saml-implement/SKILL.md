@@ -1,7 +1,7 @@
 ---
 name: saml-implement
 description: >
-  Full implement → review cycle. Delegates implementation to a background subagent, then reviews its work with a more capable model.
+  Full implement → review cycle. Delegates implementation to a background sub-agent, then reviews its work with a more capable model.
   If the review fails, it creates a fix plan and sends it back to the implementor for another iteration of implementation and review,
   until the review passes. Use this when asked to implement a feature end-to-end with automated review.
 
@@ -14,7 +14,7 @@ When this skill is invoked, execute the following phases in order.
 
 ---
 
-# Phase 1 — Implement (GPT-5.4 mini, background sub-agent)
+## Phase 1 — Implement (GPT-5.4 mini, background sub-agent)
 
 1. Read `./.plan.md`.
    - If the file does not exist, stop and tell the user:
