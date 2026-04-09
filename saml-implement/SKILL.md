@@ -14,6 +14,10 @@ When this skill is invoked, execute the following phases in order.
 
 ---
 
+## Phase 0 - Ensure autopilot mode is on
+
+0. Check if autopilot mode is on. If not, turn it on.
+
 ## Phase 1 — Implement (GPT-5.4 mini, background sub-agent)
 
 1. Read `./.plan.md`.
@@ -126,6 +130,8 @@ Instructions:
 Wait for the sub-agent to complete. Increment the iteration counter, then go
 back to the **Review step**.
 
+Do not delete `./.fix-plan.md` after fixes.
+
 ---
 
 ## Phase 3 — Done
@@ -143,4 +149,3 @@ If the loop hit the 3-iteration limit without passing, instead report:
 > Remaining issues:
 > <last FAIL message>
 > Please review manually.
-

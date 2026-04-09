@@ -2,6 +2,7 @@
 name: saml-plan-review
 description: >
   Reviews and fixes the implementation plan in `./.plan.md` to ensure it's complete, correct, and actionable before implementation begins.
+  This skill should only modify `./.plan.md` and `./.plan-review.md` (for capturing review feedback). It should **NEVER** trigger implementation directly or indirectly or modify any other file.
   This should be automatically triggered when the user asks for a review of the plan.
 ---
 
@@ -76,11 +77,13 @@ When this skill is invoked, execute the following phases in order.
    - If output starts with **`FAIL:`**, continue to Step 9.
    - If output is malformed (neither PASS nor FAIL), treat it as FAIL and ask the reviewer to rerun with the exact required format.
 
-9. Fix `./.plan.md` according to reviewer feedback.
+9. If review failed, and you can't decide which option to take, stop and ask the user what option to choose.
+
+10. Once you determined how to fix the plan, fix `./.plan.md` according to reviewer feedback.
    - Make concrete edits that address every listed gap.
    - Ask additional clarifying questions only when a feedback item cannot be resolved from codebase context.
 
-10. Re-run the reviewer check from Step 7 after edits.
+11. Re-run the reviewer check from Step 7 after edits.
    - If result is **PASS**, proceed to Phase 4.
    - If result is **FAIL**, increment iteration counter and repeat Steps 8-10 (Step 10 re-invokes Step 7).
    - If iteration counter exceeds 3, stop and report remaining issues to the user.
@@ -94,3 +97,5 @@ When this skill is invoked, execute the following phases in order.
 
 12. If the 3-iteration limit was reached without a pass, tell the user:
    **"⚠️ Plan review reached the 3-iteration limit without a clean pass. Please review the remaining issues and decide whether to continue refining `./.plan.md` manually."**
+
+13. Stop here. Do not trigger implementation or any other action. The user must explicitly ask for implementation via `saml-implement` after they're satisfied with the plan.
