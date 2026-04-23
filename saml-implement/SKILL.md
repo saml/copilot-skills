@@ -5,7 +5,7 @@ description: >
   If the review fails, it creates a fix plan and sends it back to the implementor for another iteration of implementation and review,
   until the review passes. Use this when asked to implement a feature end-to-end with automated review.
 
-  This assumes `./.plan.md` already exists (e.g. created by `saml-plan` skill) with a detailed implementation plan. If not, it will prompt the user to create one first.
+  This assumes the plan file already exists (e.g. created by `saml-plan` skill) with a detailed implementation plan. If not, it will prompt the user to create one first.
 ---
 
 # Process
@@ -14,15 +14,18 @@ When this skill is invoked, execute the following phases in order.
 
 ---
 
-## Phase 0 - Ensure autopilot mode is on
-
-0. Check if autopilot mode is on. If not, turn it on.
-
 ## Phase 1 — Implement (GPT-5.4 mini, background sub-agent)
 
-1. Read `./.plan.md`.
-   - If the file does not exist, stop and tell the user:
-     > ❌ No `./.plan.md` found. Please run the `saml-plan` skill first to create a plan.
+0. Find the latest plan file in `./.plan/` (the one with the most recent timestamp in its filename). If no plan file is found, stop and tell the user:
+   > ❌ No plan file found in `./.plan/`. Please run the `saml-plan` skill first to create a plan file.
+   You can use the following bash script to find the latest plan file (note that it is using `/usr/bin/env bash` to pick up better bash version):
+   
+   ```bash
+   #!/usr/bin/env bash
+   files=( ./.plan/2*.md )
+   echo "${files[-1]}"
+   ```
+1. Read the plan file.
 
 2. Launch a **background sub-agent** using model **`GPT-5.4 mini`** with
    the following prompt (fill in the placeholders):
@@ -34,7 +37,7 @@ When this skill is invoked, execute the following phases in order.
    Working directory: <cwd>
 
    Plan:
-   <full contents of plan.md>
+   <full contents of the plan file>
 
    Instructions:
    - Follow the plan step by step.
@@ -71,7 +74,7 @@ edge cases, test coverage, and adherence to the plan.
 Working directory: <cwd>
 
 Plan:
-<full contents of ./.plan.md>
+<full contents of the plan file>
 
 Implementation summary from the implementor (iteration <current iteration> of 3):
 <summary from Phase 1 or the most recent Fix step>
@@ -81,7 +84,7 @@ Instructions:
 - Return exactly ONE of:
     PASS: <one-sentence summary of what was implemented>
   or
-    FAIL: <detailed fix plan written to `./.fix-plan.md`>
+    FAIL: <detailed fix plan written to the fix plan file at `PLANFILE.fixplan.md` where `PLANFILE` is the name of the plan file being implemented. For example, if the plan file is `./.plan/2024-06-20-15-30-my-feature.md`, the fix plan file should be `./.plan/2024-06-20-15-30-my-feature.fixplan.md`.>
 - Do not suggest stylistic nitpicks unless they violate the project's
   stated conventions. Only flag genuine bugs, missing requirements,
   or significant quality issues.
@@ -89,7 +92,7 @@ Instructions:
 - Make sure code is simple and straightforward, without unnecessary complexity or overengineering.
 ```
 
-`./.fix-plan.md` will be created if the reviewer returns **FAIL**. It should contain a detailed
+The fix plan file will be created if the reviewer returns **FAIL**. It should contain a detailed
 fix plan that the implementor can follow to address the reviewer's concerns. It should be actionable, specific,
 and detailed enough for the implementor to make the necessary changes in a fresh new context without additional guidance.
 
@@ -111,13 +114,13 @@ listed below. Do not change code unrelated to the feedback.
 Working directory: <cwd>
 
 Original plan:
-<full contents of plan.md>
+<full contents of the plan file>
 
 Implementation summary so far:
 <summary from Phase 1 or the previous Fix step>
 
 Reviewer feedback:
-<full contents of ./.fix-plan.md>
+<full contents of the fix plan file created by the reviewer>
 
 Instructions:
 - Fix all issues raised by the reviewer.
@@ -130,7 +133,7 @@ Instructions:
 Wait for the sub-agent to complete. Increment the iteration counter, then go
 back to the **Review step**.
 
-Do not delete `./.fix-plan.md` after fixes.
+Do not delete the fix plan file after fixes.
 
 ---
 
@@ -140,8 +143,6 @@ Report to the user:
 
 > ✅ **Done!** The reviewer approved the implementation.
 > Here's a summary: <PASS message from reviewer>
->
-> Files changed: <output of `git diff --name-only HEAD` in the working directory>
 
 If the loop hit the 3-iteration limit without passing, instead report:
 
