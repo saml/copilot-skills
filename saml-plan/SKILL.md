@@ -24,11 +24,18 @@ When this skill is invoked, execute the following phases in order.
 ## Phase 2 — Write Plan
 
 - Write a self-contained implementation plan to the plan file. Use `saml-planfile` skill to create the file.
-   Overwrite any existing content.
-   The plan must be detailed enough for a less-capable model to execute in a new fresh context.
-   The plan should contain implementation detail for:
+- Overwrite any existing content.
+- The plan must be detailed enough for a less-capable model to execute in a new fresh context.
+- Top priority is simplicity and readability of the code. If the plan includes any code snippets, they should be simple and readable, properly composed of multiple functions instead of one giant code block. 
+- Think before planning. State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them. Don't pick silently.
+- If something is unclear, stop. Name what's confusing. Ask.
+- The plan should have these properties:
+   - Simplicity first. Minimum code that solves the problem.
+   - Ask yourself, "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+   - Surgical changes only. Touch only what you must. Clean up your own mess.
    - TDD methodology: which tests to write first, and what each test validates.
-   - Specific file paths and function names to create/modify.
+   - Should have specific file paths and function names to create/modify.
    - Key decisions made and the rationale behind them.
    - Dependencies or prerequisites (libraries, env vars, existing utilities to reuse).
    - Error handling and edge cases to address.

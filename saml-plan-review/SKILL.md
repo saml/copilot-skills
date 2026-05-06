@@ -54,10 +54,10 @@ When this skill is invoked, execute the following phases in order.
    <full contents of the plan file>
 
    Assess the plan for:
+   - Simplicity: is the plan as straightforward as possible, without unnecessary complexity and overengineering?
    - Completeness: are all necessary steps present? Are file paths and function names concrete?
    - Correctness: does the approach make sense given the codebase?
    - Succinctness: is the plan free of unnecessary steps or detail that doesn't add value?
-   - Simplicity: is the plan as straightforward as possible, without unnecessary complexity and overengineering?
    - Actionability: could a junior engineer follow this without additional context?
 
    Write the review result to the review file at `PLANFILE.review.md` where `PLANFILE` is the name of the plan file being reviewed. For example, if the plan file is `./.plan/2024-06-20-15-30-my-feature.md`, the review file should be `./.plan/2024-06-20-15-30-my-feature.review.md`.

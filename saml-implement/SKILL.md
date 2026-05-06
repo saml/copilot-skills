@@ -41,6 +41,8 @@ When this skill is invoked, execute the following phases in order.
 
    Instructions:
    - Follow the plan step by step.
+   - Simplicity first. Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+   - Surgical changes only. Touch only what you must. Clean up your own mess.
    - After making all changes, discover and run the existing tests and linter.
      To find them, check (in order): Makefile targets, package.json scripts,
      pom.xml (mvn test), build.gradle, or a CI config (e.g. .github/workflows/).
@@ -68,7 +70,7 @@ Launch a **background sub-agent** using model **`Claude Sonnet 4.6`** with this 
 
 ```
 You are a senior code reviewer. Review the implementation in the working
-directory against the plan below. Focus on: correctness, code quality,
+directory against the plan below. Focus on: simplicity, readability, correctness, code quality,
 edge cases, test coverage, and adherence to the plan.
 
 Working directory: <cwd>
