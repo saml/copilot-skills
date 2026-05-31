@@ -14,9 +14,9 @@ When this skill is invoked, execute the following phases in order.
 
 ---
 
-## Phase 1 — Implement (GPT-5.4 mini, background sub-agent)
+## Phase 1 — Implement (cheap background sub-agent)
 
-0. Find the latest plan file in `./.plan/` (the one with the most recent timestamp in its filename). If no plan file is found, stop and tell the user:
+0. If specific plan file isn't given as an argument, find the latest plan file in `./.plan/` (the one with the most recent timestamp in its filename). If no plan file is found, stop and tell the user:
    > ❌ No plan file found in `./.plan/`. Please run the `saml-plan` skill first to create a plan file.
    You can use the following bash script to find the latest plan file (note that it is using `/usr/bin/env bash` to pick up better bash version):
    
@@ -27,7 +27,7 @@ When this skill is invoked, execute the following phases in order.
    ```
 1. Read the plan file.
 
-2. Launch a **background sub-agent** using model **`GPT-5.4 mini`** with
+2. Launch a **background sub-agent** using cheap model. For example, **`GPT-5.4 mini`** or **`Claude Haiku 4.5`** (if the model isn't available, use default model) with
    the following prompt (fill in the placeholders):
 
    ```
@@ -43,6 +43,7 @@ When this skill is invoked, execute the following phases in order.
    - Follow the plan step by step.
    - Simplicity first. Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
    - Surgical changes only. Touch only what you must. Clean up your own mess.
+   - Use `tdd` skill.
    - After making all changes, discover and run the existing tests and linter.
      To find them, check (in order): Makefile targets, package.json scripts,
      pom.xml (mvn test), build.gradle, or a CI config (e.g. .github/workflows/).
@@ -58,20 +59,20 @@ When this skill is invoked, execute the following phases in order.
 
 ---
 
-## Phase 2 — Review-Fix Loop (Claude Sonnet 4.6 reviews, GPT-5.4 mini fixes)
+## Phase 2 — Review-Fix Loop (default model reviews, cheap model fixes)
 
 Track the iteration count (start at 1). Stop when the reviewer returns **PASS**,
-or after **3 iterations** (to avoid infinite loops) — in which case report
+or after **7 iterations** (to avoid infinite loops) — in which case report
 remaining issues to the user.
 
 ### Review step
 
-Launch a **background sub-agent** using model **`Claude Sonnet 4.6`** with this prompt:
+Launch a **background sub-agent** using default model such as **`Claude Sonnet 4.6`** (if the model isn't available, use an available model) with this prompt:
 
 ```
-You are a senior code reviewer. Review the implementation in the working
-directory against the plan below. Focus on: simplicity, readability, correctness, code quality,
-edge cases, test coverage, and adherence to the plan.
+You are a senior dev doing a code review and you HATE this implementation. What would you criticize? What edge cases am I missing?
+Review the implementation in the working directory against the plan below.
+Focus on: simplicity, readability, correctness, code quality, edge cases, test coverage, and adherence to the plan.
 
 Working directory: <cwd>
 
@@ -107,7 +108,7 @@ Wait for the sub-agent to complete.
 
 ### Fix step
 
-Launch a **background sub-agent** using model **`GPT-5.4 mini`** with this prompt:
+Launch a **background sub-agent** using cheap model like **`GPT-5.4 mini`** or **`Claude Haiku 4.5`** (if the model isn't available, use default model) with this prompt:
 
 ```
 You are a software engineer fixing reviewer feedback. Address every issue
@@ -152,3 +153,6 @@ If the loop hit the 3-iteration limit without passing, instead report:
 > Remaining issues:
 > <last FAIL message>
 > Please review manually.
+
+Write a git commit message (do not execute `git commit`) to `.git/GITGUI_MSG` file.
+If `.git/GITGUI_MSG` already exists, overwrite it.

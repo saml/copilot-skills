@@ -12,12 +12,13 @@ When this skill is invoked, execute the following phases in order.
 
 ## Phase 1 — Setup
 
-- Ask clarifying questions (one at a time via the question tool, for example `ask_user` or `vscode_askQuestions`) to resolve ambiguity before writing the plan. Focus on:
+- Use `grill-with-docs` skill first, to get context.
+  Ask additional questions and focus on:
    - Feature scope and boundaries (what's in / out)
    - Behavioral choices (defaults, limits, error handling)
    - Implementation approach when multiple valid options exist
 
-   Skip questions that have an obvious, unambiguous answer.
+Skip questions that have an obvious, unambiguous answer.
 
 ---
 
@@ -27,6 +28,7 @@ When this skill is invoked, execute the following phases in order.
 - Overwrite any existing content.
 - The plan must be detailed enough for a less-capable model to execute in a new fresh context.
 - Top priority is simplicity and readability of the code. If the plan includes any code snippets, they should be simple and readable, properly composed of multiple functions instead of one giant code block. 
+- Use `tdd` skill to plan for TDD.
 - Think before planning. State your assumptions explicitly. If uncertain, ask.
 - If multiple interpretations exist, present them. Don't pick silently.
 - If something is unclear, stop. Name what's confusing. Ask.

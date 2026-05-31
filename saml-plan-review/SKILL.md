@@ -41,9 +41,9 @@ When this skill is invoked, execute the following phases in order.
 
 ## Phase 3 — Review-Fix Loop
 
-6. Set an iteration counter to 1. Use a maximum of 3 iterations.
+6. Set an iteration counter to 1. Use a maximum of 7 iterations.
 
-7. Launch a **sync sub-agent** using model **`Claude Sonnet 4.6`** with the following prompt:
+7. Launch a **sync sub-agent** using default model with the following prompt:
 
    ```
    You are a senior engineer reviewing an implementation plan.
@@ -84,7 +84,7 @@ When this skill is invoked, execute the following phases in order.
 11. Re-run the reviewer check from Step 7 after edits.
    - If result is **PASS**, proceed to Phase 4.
    - If result is **FAIL**, increment iteration counter and repeat Steps 8-10 (Step 10 re-invokes Step 7).
-   - If iteration counter exceeds 3, stop and report remaining issues to the user.
+   - If iteration counter exceeds 7, stop and report remaining issues to the user.
 
 ---
 
@@ -94,6 +94,6 @@ When this skill is invoked, execute the following phases in order.
    **"✅ Plan reviewed and updated. Please review the plan file (include path to the plan file). Let me know if you'd like any further changes."**
 
 12. If the 3-iteration limit was reached without a pass, tell the user:
-   **"⚠️ Plan review reached the 3-iteration limit without a clean pass. Please review the remaining issues and decide whether to continue refining the plan file (include the plan file path) manually."**
+   **"⚠️ Plan review reached the 7-iteration limit without a clean pass. Please review the remaining issues and decide whether to continue refining the plan file (include the plan file path) manually."**
 
 13. Stop here. Do not trigger implementation or any other action. The user must explicitly ask for implementation via `saml-implement` after they're satisfied with the plan.

@@ -6,6 +6,13 @@ description: >
 ---
 
 Create the file named `./.plan/YYYY-MM-DD-hh-mm-TITLE.md` where `YYYY-MM-DD-hh-mm` part is current year month day hour minute.
+Generate the timestamp part using the following script:
+
+```bash
+#!/usr/bin/env bash
+date '+%Y-%m-%d-%H-%M'
+```
+
 And, `TITLE` part should be short title of the plan.
 Make sure `TITLE` part does not contain white spaces. And `TITLE` part should be all lower case.
 
