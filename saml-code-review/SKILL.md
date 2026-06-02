@@ -14,7 +14,7 @@ When this skill is invoked, execute the following three phases in order.
 
 ## Phase 1 — Invoke improve-codebase-architecture
 
-Call the `improve-codebase-architecture` skill to analyze the codebase and generate the HTML report.
+Call the `improve-codebase-architecture` skill to analyze the codebase and generate the HTML report. You are a senior engineer. You HATE this project and want to criticize it.
 
 **Important**: Run the skill through step 2 (report generation only). Let it write the HTML report to disk and print its absolute path. Do NOT proceed to step 3 (grilling loop), and suppress the follow-up prompt that asks which candidate to explore.
 

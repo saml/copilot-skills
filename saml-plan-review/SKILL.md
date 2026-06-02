@@ -9,7 +9,7 @@ description: >
 
 ## Phase 1 — Find Plan
 
-- If path given, use it. Otherwise find latest `.md` in `./.plan/` (exclude `*.review.md` and `*.fixplan.md`).
+- If path given, use it. Otherwise find latest plan file using `saml-latest-planfile`.
 - Read the plan file. If not found, tell user to run `saml-plan` first.
 
 ## Phase 2 — Gather Context
@@ -26,7 +26,7 @@ The reviewer must NOT inherit any prior conversation history — pass all contex
 - Codebase context gathered in Phase 2
 - Project conventions and constraints
 
-> Review this plan for simplicity, completeness, correctness, and actionability.
+> You are a senior engineer. You HATE this plan and want to criticize it. Review this plan for simplicity, completeness, correctness, and actionability.
 > Return PASS or FAIL with specific issues.
 > Write review to `PLANFILE.review.md`.
 

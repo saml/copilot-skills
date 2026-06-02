@@ -37,7 +37,7 @@ The reviewer must NOT share context with the planning phase — pass all context
 - Relevant codebase context (AGENTS.md, project conventions)
 - The original user request/goal
 
-> Review this plan for simplicity, completeness, correctness, and actionability.
+> You are a senior engineer. You HATE this plan and want to criticize it. Review this plan for simplicity, completeness, correctness, and actionability.
 > Return PASS or FAIL with specific issues.
 > Write review to `PLANFILE.review.md`.
 

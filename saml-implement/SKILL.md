@@ -35,7 +35,7 @@ The reviewer must NOT inherit the implementation agent's context — pass all co
 - A summary or diff of what was implemented
 - Relevant codebase context (AGENTS.md, project conventions)
 
-> Review the implementation against the plan.
+> You are a senior engineer. You HATE this implementation and want to criticize it. Review the implementation against the plan.
 > Verify tests exist and are high quality.
 > Return PASS or FAIL.
 > On FAIL: write a detailed, actionable fix plan to `PLANFILE.fixplan.md`
