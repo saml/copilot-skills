@@ -1,206 +1,82 @@
 ---
 name: saml-code-review
 description: >
-  Reviews the codebase end-to-end using improve-codebase-architecture, stores the HTML report
-  to .todo/, generates and updates .todo/todo.csv, and lets you work through items with
-  saml-plan and saml-implement.
+  Pure orchestration wrapper for code review. Delegates codebase analysis to improve-codebase-architecture
+  (which produces the HTML report), extracts candidates into .todo/todo.csv + .todo/{id}.md files, and leaves
+  todo management to saml-todo and saml-todo-next.
 ---
 
 # Process
 
-When this skill is invoked, execute the following phases in order.
+When this skill is invoked, execute the following three phases in order.
 
 ---
 
-## Phase 1 — Read Context
+## Phase 1 — Invoke improve-codebase-architecture
 
-1. Find and read the project's domain context:
-   - `CONTEXT.md` at repo root or in `docs/`
-   - ADRs in `docs/adr/` if they exist
-   - Architecture notes in `agents/` if they exist
+Call the `improve-codebase-architecture` skill to analyze the codebase and generate the HTML report.
 
-2. Find all source files to review:
-   - For Android/Kotlin: glob `**/*.kt` in `app/src/main/java/`
-   - Adjust glob for other languages as appropriate
+**Important**: Run the skill through step 2 (report generation only). Let it write the HTML report to disk and print its absolute path. Do NOT proceed to step 3 (grilling loop), and suppress the follow-up prompt that asks which candidate to explore.
 
-3. Read the improve-codebase-architecture skill files for vocabulary:
-   - `LANGUAGE.md` — module, interface, implementation, depth, seam, adapter, leverage, locality
-   - `HTML-REPORT.md` — report format and diagram patterns
+Capture the absolute path to the HTML report from the skill's output.
 
 ---
 
-## Phase 2 — Explore Codebase
+## Phase 2 — Extract Todos
 
-Use the **Explore agent** (stateless sub-agent) to walk the codebase organically. Do NOT use grep directly — delegate to the explore agent. Pass complete context.
+Create the `.todo/` directory if it does not exist.
 
-Explore for:
-- Shallow modules (interface nearly as complex as implementation)
-- Leaky abstractions (implementation details bleeding across seams)
-- God screens (files doing too much, too many state variables)
-- Missing seams (untestable because no interface to inject)
-- Tight coupling across packages
-- Untested or hard-to-test code
+Parse the HTML report produced by step 1. Extract candidates from the report (candidate cards only; ignore the Top recommendation summary at the end).
 
-Apply the **deletion test**: imagine deleting the module. Does complexity vanish (pass-through) or reappear across N callers (earning its keep)?
+For each candidate card, create one `.todo/{id}.md` file and one row in `.todo/todo.csv`.
 
-Cover these areas:
-- **Domain layer**: domain models, repository interfaces, use cases
-- **Data layer**: repository implementations, Room DAOs/entities, file storage
-- **UI layer**: screens, ViewModels, sheet/dialog components, form fields
+**ID Format**: `NN-kebab-title` where NN is zero-padded sequence (01, 02, ...) and kebab-title is the candidate's title converted to kebab-case.
+
+**Section order in each `.todo/{id}.md` file**:
+
+- `# {title}` — heading with the candidate's title
+- `## Severity: {severity}` — mapped from recommendation strength
+- `## Files` — list of file paths affected; include line ranges only if the candidate specifies them, otherwise just file paths
+- `## Problem` — candidate's problem text
+- `## Solution` — candidate's solution text
+- `## Category` — always set to `architecture`
+- `## Status: pending` — new items always start pending
+
+**Severity mapping**:
+
+- `Strong` → `high`
+- `Worth exploring` → `medium`
+- `Speculative` → `low`
+- Override to `critical` if the candidate describes a runtime crash, data loss, or security issue
+
+**CSV file** (`.todo/todo.csv`) format: columns are `id,title,description,status,severity`. Use Python csv.DictWriter. Sort rows by severity (critical → high → medium → low), then by id. Example columns:
+
+- `id`: `01-kebab-title`
+- `title`: candidate's title
+- `description`: candidate's problem text (one-liner)
+- `status`: always `pending` for new items
+- `severity`: mapped from recommendation strength
+
+**Filename invariant**: each row's `id` in the CSV must have a corresponding `.todo/{id}.md` file.
 
 ---
 
-## Phase 3 — Write HTML Report
+## Phase 3 — Report
 
-Write a self-contained HTML report to `.todo/YYYY-MM-DD-architecture-review.html`.
+Print the following:
 
-Use the format from `HTML-REPORT.md`:
-- Tailwind via CDN + Mermaid via CDN for diagrams
-- One card per candidate with before/after diagrams
-- Recommendation strength badges: `Strong` (emerald), `Worth exploring` (amber), `Speculative` (slate)
-- Top recommendation section at the end
+- **HTML Report Path**: absolute path to the HTML report produced by `improve-codebase-architecture`
+- **Todo CSV Path**: path to `.todo/todo.csv`
+- **Count by Severity**: total counts in the format `N critical, N high, N medium, N low`
+- **Next Steps**: suggest running `saml-todo-next` to start working through items
 
-Diagram types to use:
-- Mermaid flowchart for call/dep graphs
-- Mass diagram for interface-vs-implementation size comparison
-- Cross-section for layered shallowness
+Example output:
 
-Use the glossary terms exactly: **module, interface, implementation, depth, deep, shallow, seam, adapter, leverage, locality**. Never substitute: component, service, boundary, layer.
-
----
-
-## Phase 4 — Generate Todo Items
-
-Read the HTML report and the raw code findings. Generate one `.todo/NN-TICKET-ID.md` file per actionable item, and update `.todo/todo.csv`.
-
-### Todo item file format
-
-```markdown
-# Title
-
-## Severity: critical | high | medium | low
-
-## Files
-- file1.kt (lines N-M)
-- file2.kt (line X)
-
-## Problem
-One sentence. What hurts and why it matters.
-
-## Solution
-One sentence. What changes.
-
-## Category
-clean-code | architecture | kotlin-idiom | android-pattern
-
-## Status: pending
 ```
+✅ Code review complete.
 
-### .todo/todo.csv format
+HTML Report: /absolute/path/to/.todo/2026-06-02-architecture-review.html
+Todo list: .todo/todo.csv (2 critical, 3 high, 5 medium, 1 low)
 
-```csv
-id,title,description,status,severity
-NN-ticket-id,Short title,One-liner from problem,pending,critical
+Run saml-todo-next to start working through items.
 ```
-
-Write it with Python:
-
-```python
-import csv
-
-SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-
-rows = [{"id": "01-x", "title": "...", "description": "...", "status": "pending", "severity": "critical"}]
-rows.sort(key=lambda r: (SEVERITY_ORDER.get(r["severity"], 9), r["id"]))
-
-with open(".todo/todo.csv", "w", newline="") as f:
-    writer = csv.DictWriter(f, fieldnames=["id", "title", "description", "status", "severity"])
-    writer.writeheader()
-    writer.writerows(rows)
-```
-
-Ordering: critical first, then high, medium, low. Within each group, by id/number.
-
-### Severity rules
-- **critical**: runtime crash, data loss, security issue
-- **high**: significant architectural smell, major code quality problem
-- **medium**: noticeable issue, fixable when touching that code
-- **low**: polish, minor improvement
-
----
-
-## Phase 5 — Done
-
-Report:
-- Path to the HTML report (`.todo/YYYY-MM-DD-architecture-review.html`)
-- Path to `.todo/todo.csv`
-- Count by severity
-- First critical item ready to work on
-
-Example:
-> ✅ Code review complete.
->
-> **HTML Report**: `.todo/2026-05-31-architecture-review.html`
-> **Todo list**: `.todo/todo.csv` (4 critical, 3 high, 4 medium, 1 low)
->
-> Start with `saml-plan` for `01-nullable-deps-crash` (fix ItemListViewModel nullable deps).
-
----
-
-## Working Through Todos
-
-To automatically work through todos, do the following in a loop:
-1. Pick the next pending item from `.todo/todo.csv` (start with critical).
-2. `saml-plan` → creates `.plan/YYYY-MM-DD-hh-mm-TICKET-ID.md`
-3. `saml-implement` → implements from the plan, reviews, fixes. Only if `saml-plan` was successful. Otherwise, halt.
-4. Mark done in `.todo/todo.csv` only if `saml-implement` was successful. Otherwise, halt.
-5. Execute `git add .` and `git commit --file .git/GITGUI_MSG` to create a commit, only if it's successful so far. Otherwise, halt.
-
-To mark done manually:
-```python
-import csv, tempfile, os
-
-target_id = "01-nullable-deps-crash"
-new_status = "done"
-fieldnames = ["id", "title", "description", "status", "severity"]
-updated = False
-tmp_path = None
-
-with open(".todo/todo.csv", newline="") as f:
-    rows = list(csv.DictReader(f))
-
-for r in rows:
-    if r["id"] == target_id:
-        r["status"] = new_status
-        updated = True
-
-if not updated:
-    raise ValueError(f"ID '{target_id}' not found")
-
-try:
-    with tempfile.NamedTemporaryFile("w", dir=".todo", delete=False, newline="", suffix=".csv") as tmp:
-        tmp_path = tmp.name
-        writer = csv.DictWriter(tmp, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-
-    os.replace(tmp_path, ".todo/todo.csv")
-except Exception:
-    if tmp_path and os.path.exists(tmp_path):
-        os.unlink(tmp_path)
-    raise
-```
-
-To view current status:
-```python
-import csv
-
-SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-
-with open(".todo/todo.csv", newline="") as f:
-    rows = sorted(csv.DictReader(f), key=lambda r: (SEVERITY_ORDER.get(r["severity"], 9), r["id"]))
-for r in rows:
-    print(f'{r["severity"]} [{r["status"]}] {r["id"]} - {r["title"]}')
-```
-
-Tackle the next todo item one by one until all items are done.
