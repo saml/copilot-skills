@@ -11,7 +11,7 @@ description: >
 
 - Use `saml-latest-planfile` skill to find the latest plan file, or use given path.
   If no plan file found, stop: "❌ No plan file found. Run `saml-plan` first."
-- Launch background sub-agent (cheap model: GPT-5.4 mini or Haiku 4.5):
+- Launch background sub-agent (task agent type):
 
   > Implement this plan exactly. Use `tdd` skill.
   > After changes, discover and run tests/linter
@@ -22,7 +22,7 @@ description: >
 
 ## Phase 2 — Review-Fix Loop
 
-Launch background sub-agent (default model) to review:
+Launch background sub-agent (general-purpose agent type) to review:
 
 > Review the implementation against the plan.
 > Verify tests exist and are high quality.
@@ -32,7 +32,7 @@ Launch background sub-agent (default model) to review:
 > Only flag bugs, missing requirements, or quality issues — not style.
 
 - If PASS → done.
-- If FAIL → launch cheap sub-agent with cwd, plan contents, and fixplan.md to fix. Fixer must rerun tests/linter after changes. Then re-run review.
+- If FAIL → launch sub-agent (task agent type) with cwd, plan contents, and fixplan.md to fix. Fixer must rerun tests/linter after changes. Then re-run review.
 - Max 10 iterations.
 
 ## Done
