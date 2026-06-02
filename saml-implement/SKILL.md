@@ -11,7 +11,13 @@ description: >
 
 - Use `saml-latest-planfile` skill to find the latest plan file, or use given path.
   If no plan file found, stop: "❌ No plan file found. Run `saml-plan` first."
-- Launch background sub-agent (task agent type):
+- Read the plan file contents fully.
+- Launch a **task sub-agent** (task agent type. fresh context window) to implement.
+  The implementer must NOT inherit your context — pass all context explicitly in the prompt:
+
+  - The full plan file contents (verbatim)
+  - The working directory path
+  - Relevant codebase context (AGENTS.md, project conventions, Makefile if present)
 
   > Implement this plan exactly. Use `tdd` skill.
   > After changes, discover and run tests/linter
