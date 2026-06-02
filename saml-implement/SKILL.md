@@ -9,7 +9,7 @@ description: >
 
 ## Phase 1 — Implement
 
-- Find latest plan file in `./.plan/` (exclude `*.review.md` and `*.fixplan.md`), or use given path.
+- Use `saml-latest-planfile` skill to find the latest plan file, or use given path.
   If no plan file found, stop: "❌ No plan file found. Run `saml-plan` first."
 - Launch background sub-agent (cheap model: GPT-5.4 mini or Haiku 4.5):
 
@@ -33,7 +33,7 @@ Launch background sub-agent (default model) to review:
 
 - If PASS → done.
 - If FAIL → launch cheap sub-agent with cwd, plan contents, and fixplan.md to fix. Fixer must rerun tests/linter after changes. Then re-run review.
-- Max 3 iterations.
+- Max 10 iterations.
 
 ## Done
 

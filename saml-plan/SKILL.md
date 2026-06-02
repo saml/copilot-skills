@@ -38,7 +38,7 @@ Launch a sync sub-agent (default model) to review the plan:
 
 - If PASS → done.
 - If FAIL → fix the plan file, re-run review.
-- Max 3 iterations. If still failing, report to user with path to `PLANFILE.review.md`.
+- Max 10 iterations. If still failing, report to user with path to `PLANFILE.review.md`.
 
 ## Done
 
