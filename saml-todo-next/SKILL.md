@@ -12,7 +12,7 @@ Loops through ALL pending todo items until none remain. Each item goes through: 
 
 ## Process
 
-**LOOP**: Repeat steps 1–7 until no pending items remain. Each iteration processes one item and creates one commit.
+**LOOP**: Repeat steps 1–3 until no pending items remain. Each iteration processes one item in a fresh sub-agent context and creates one commit.
 
 ### 1. Find the next pending item
 
@@ -38,90 +38,72 @@ next_item = pending[0] if pending else None
 Read the corresponding `.todo/{id}.md` file for full context:
 
 ```bash
-cat .todo/01-itemlistscreen-god-screen.md
+cat .todo/{id}.md
 ```
 
-### 3. Mark in_progress
+### 3. Launch fresh sub-agent to process item
 
-Before doing any work, update `.todo/todo.csv`:
+Launch a **single general-purpose task sub-agent** with a fresh context. This sub-agent is **stateless** — pass all context it needs in the prompt. The sub-agent will:
 
-```python
-import csv, tempfile, os
+1. Mark the item as `in_progress` in `.todo/todo.csv`
+2. Invoke `saml-plan` skill (automation mode — no interactive questions)
+3. If plan passes: invoke `saml-implement` skill with the plan file path
+4. If implement passes: `git add . && git commit --file .git/GITGUI_MSG`
+5. Mark item as `done` in `.todo/todo.csv`
+6. Return result (success/failure + plan file path + summary)
 
-target_id = "01-itemlistscreen-god-screen"
-new_status = "in_progress"
-fieldnames = ["id", "title", "description", "status", "severity"]
-updated = False
-tmp_path = None
+#### Sub-agent context
 
-with open(".todo/todo.csv", newline="") as f:
-    rows = list(csv.DictReader(f))
+Pass the following in the sub-agent prompt:
 
-for r in rows:
-    if r["id"] == target_id:
-        r["status"] = new_status
-        updated = True
+**Todo item details:**
+- ID: `{next_item["id"]}`
+- Title: `{next_item["title"]}`
+- Description: `{next_item["description"]}`
+- Severity: `{next_item["severity"]}`
 
-if not updated:
-    raise ValueError(f"ID '{target_id}' not found")
-
-try:
-    with tempfile.NamedTemporaryFile("w", dir=".todo", delete=False, newline="", suffix=".csv") as tmp:
-        tmp_path = tmp.name
-        writer = csv.DictWriter(tmp, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-
-    os.replace(tmp_path, ".todo/todo.csv")
-except Exception:
-    if tmp_path and os.path.exists(tmp_path):
-        os.unlink(tmp_path)
-    raise
+**Detail file:**
+```
+{contents of .todo/{id}.md}
 ```
 
-### 4. Invoke saml-plan (sub-agent)
+**Project context (to help the sub-agent navigate):**
+- AGENTS.md contents (list of available skills)
+- Makefile if present in project root
 
-Invoke the `saml-plan` skill with context:
-- Ticket ID
-- Title
-- Description
-- Severity
-- File paths from the detail file
+**Explicit instruction in prompt:**
+> This is automation mode. You are processing a single todo item.
+> - Invoke `saml-plan` skill WITHOUT interactive questions (automation mode).
+> - Pass the todo details as context to saml-plan.
+> - After plan succeeds, invoke `saml-implement` with the exact plan file path.
+> - After implement succeeds, run: `git add . && git commit --file .git/GITGUI_MSG`
+> - Mark item done in .todo/todo.csv
+> - Report: STATUS: PASS|FAIL, plan file path, summary
 
-The saml-plan skill will run its full process:
-1. Setup (grill-with-docs to clarify scope)
-2. Write plan to `.plan/YYYY-MM-DD-hh-mm-TICKET-ID.md`
-3. Internal review-fix loop (no separate saml-plan-review invocation)
+#### Sub-agent expected output
 
-### 5. If saml-plan passes — Invoke saml-implement (sub-agent)
+The sub-agent must report back:
+- `STATUS: PASS` or `STATUS: FAIL`
+- Plan file path (e.g., `.plan/2025-01-15-14-30-01-itemlistscreen.md`)
+- If FAIL: reason and which step failed (plan/implement/commit/mark-done)
 
-Once saml-plan succeeds, invoke `saml-implement` skill automatically. This:
-1. Finds the plan file created by saml-plan
-2. Launches a background sub-agent to implement from the plan
-3. Runs review-fix loop until review passes or iteration limit reached
-4. Writes commit message to `.git/GITGUI_MSG`
+#### Error handling for this step
 
-### 6. If saml-implement passes — Git commit
+- **Sub-agent returns `STATUS: FAIL`**: Stop the loop. Report the failure reason and which step failed. Leave item as `in_progress` in `.todo/todo.csv`.
+- **Sub-agent times out or crashes**: Stop the loop. Leave item as `in_progress` in `.todo/todo.csv`. Report timeout/crash.
 
-After saml-implement completes successfully, execute:
-
-```bash
-git add . && git commit --file .git/GITGUI_MSG
-```
-
-### 7. Mark done
-
-Reuse the update snippet above with `new_status = "done"`.
-
-**→ Go back to Step 1 (next iteration of the loop).**
+**→ Loop: Go back to Step 1 to process next item (if sub-agent succeeded and reported PASS).**
 
 ### Error Handling
 
-- If saml-plan fails: leave item as `in_progress`, **stop the loop**, report the review file for the user to address.
-- If saml-implement fails after iteration limit: **stop the loop**, report remaining issues, do not commit, leave as `in_progress`.
-- If git commit fails: **stop the loop**, report error, leave as `in_progress`.
+- **Sub-agent returns `STATUS: FAIL`**: Stop processing. Report the failure reason and which step failed. Leave item as `in_progress` in `.todo/todo.csv`.
+- **Sub-agent times out or crashes**: Stop processing. Leave item as `in_progress`. Report timeout/crash to user.
+- **Normal completion after all items done**: Print summary of completed items and commits.
 
-On any error, output a summary of what was completed (items done) and what remains (items still pending/in_progress).
+On any error, output a summary of:
+- Items completed (marked `done`)
+- Items in progress that encountered errors
+- Next steps for the user
 
 ## Workflow reference
 
