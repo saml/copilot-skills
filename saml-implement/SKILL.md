@@ -1,158 +1,41 @@
 ---
 name: saml-implement
 description: >
-  Full implement → review cycle. Delegates implementation to a background sub-agent, then reviews its work with a more capable model.
-  If the review fails, it creates a fix plan and sends it back to the implementor for another iteration of implementation and review,
-  until the review passes. Use this when asked to implement a feature end-to-end with automated review.
-
-  This assumes the plan file already exists (e.g. created by `saml-plan` skill) with a detailed implementation plan. If not, it will prompt the user to create one first.
+  Implements from the latest plan file using a cheap sub-agent,
+  then review-fix loops until approved.
 ---
 
 # Process
 
-When this skill is invoked, execute the following phases in order.
+## Phase 1 — Implement
 
----
+- Find latest plan file in `./.plan/` (exclude `*.review.md` and `*.fixplan.md`), or use given path.
+  If no plan file found, stop: "❌ No plan file found. Run `saml-plan` first."
+- Launch background sub-agent (cheap model: GPT-5.4 mini or Haiku 4.5):
 
-## Phase 1 — Implement (cheap background sub-agent)
+  > Implement this plan exactly. Use `tdd` skill.
+  > After changes, discover and run tests/linter
+  > (check Makefile, package.json, pom.xml, build.gradle, or CI config).
+  > Summarize what changed and pass/fail status.
 
-0. If specific plan file isn't given as an argument, find the latest plan file in `./.plan/` (the one with the most recent timestamp in its filename). If no plan file is found, stop and tell the user:
-   > ❌ No plan file found in `./.plan/`. Please run the `saml-plan` skill first to create a plan file.
-   You can use the following bash script to find the latest plan file (note that it is using `/usr/bin/env bash` to pick up better bash version):
-   
-   ```bash
-   #!/usr/bin/env bash
-   files=( ./.plan/2*.md )
-   echo "${files[-1]}"
-   ```
-1. Read the plan file.
+- Wait for completion.
 
-2. Launch a **background sub-agent** using cheap model. For example, **`GPT-5.4 mini`** or **`Claude Haiku 4.5`** (if the model isn't available, use default model) with
-   the following prompt (fill in the placeholders):
+## Phase 2 — Review-Fix Loop
 
-   ```
-   You are a software engineer. Your job is to implement the following plan
-   exactly as written. Do not skip steps or take shortcuts.
+Launch background sub-agent (default model) to review:
 
-   Working directory: <cwd>
+> Review the implementation against the plan.
+> Verify tests exist and are high quality.
+> Return PASS or FAIL.
+> On FAIL: write a detailed, actionable fix plan to `PLANFILE.fixplan.md`
+> that a cheap model can follow in a fresh context without additional guidance.
+> Only flag bugs, missing requirements, or quality issues — not style.
 
-   Plan:
-   <full contents of the plan file>
+- If PASS → done.
+- If FAIL → launch cheap sub-agent with cwd, plan contents, and fixplan.md to fix. Fixer must rerun tests/linter after changes. Then re-run review.
+- Max 3 iterations.
 
-   Instructions:
-   - Follow the plan step by step.
-   - Simplicity first. Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-   - Surgical changes only. Touch only what you must. Clean up your own mess.
-   - Use `tdd` skill.
-   - After making all changes, discover and run the existing tests and linter.
-     To find them, check (in order): Makefile targets, package.json scripts,
-     pom.xml (mvn test), build.gradle, or a CI config (e.g. .github/workflows/).
-     Run whatever is present; skip gracefully if nothing is found.
-   - When done, provide a concise summary of: what was changed, which files
-     were modified, and whether tests/linter passed or failed.
-   ```
+## Done
 
-3. Wait for the sub-agent to complete.
-
-4. Collect its summary. If it reports test/linter failures that it could not
-   fix, note them — they will be passed to the reviewer.
-
----
-
-## Phase 2 — Review-Fix Loop (default model reviews, cheap model fixes)
-
-Track the iteration count (start at 1). Stop when the reviewer returns **PASS**,
-or after **7 iterations** (to avoid infinite loops) — in which case report
-remaining issues to the user.
-
-### Review step
-
-Launch a **background sub-agent** using default model such as **`Claude Sonnet 4.6`** (if the model isn't available, use an available model) with this prompt:
-
-```
-You are a senior dev doing a code review and you HATE this implementation. What would you criticize? What edge cases am I missing?
-Review the implementation in the working directory against the plan below.
-Focus on: simplicity, readability, correctness, code quality, edge cases, test coverage, and adherence to the plan.
-
-Working directory: <cwd>
-
-Plan:
-<full contents of the plan file>
-
-Implementation summary from the implementor (iteration <current iteration> of 3):
-<summary from Phase 1 or the most recent Fix step>
-
-Instructions:
-- Examine the relevant changed files.
-- Return exactly ONE of:
-    PASS: <one-sentence summary of what was implemented>
-  or
-    FAIL: <detailed fix plan written to the fix plan file at `PLANFILE.fixplan.md` where `PLANFILE` is the name of the plan file being implemented. For example, if the plan file is `./.plan/2024-06-20-15-30-my-feature.md`, the fix plan file should be `./.plan/2024-06-20-15-30-my-feature.fixplan.md`.>
-- Do not suggest stylistic nitpicks unless they violate the project's
-  stated conventions. Only flag genuine bugs, missing requirements,
-  or significant quality issues.
-- Make sure tests are written as well. And tests are high production quality code.
-- Make sure code is simple and straightforward, without unnecessary complexity or overengineering.
-```
-
-The fix plan file will be created if the reviewer returns **FAIL**. It should contain a detailed
-fix plan that the implementor can follow to address the reviewer's concerns. It should be actionable, specific,
-and detailed enough for the implementor to make the necessary changes in a fresh new context without additional guidance.
-
-Wait for the sub-agent to complete.
-
-### Decision
-
-- If the reviewer returns **`PASS`**: go to Phase 3.
-- If the reviewer returns **`FAIL`**: proceed to the Fix step.
-
-### Fix step
-
-Launch a **background sub-agent** using cheap model like **`GPT-5.4 mini`** or **`Claude Haiku 4.5`** (if the model isn't available, use default model) with this prompt:
-
-```
-You are a software engineer fixing reviewer feedback. Address every issue
-listed below. Do not change code unrelated to the feedback.
-
-Working directory: <cwd>
-
-Original plan:
-<full contents of the plan file>
-
-Implementation summary so far:
-<summary from Phase 1 or the previous Fix step>
-
-Reviewer feedback:
-<full contents of the fix plan file created by the reviewer>
-
-Instructions:
-- Fix all issues raised by the reviewer.
-- Discover and run the existing tests and linter after your changes
-  (check Makefile, package.json scripts, pom.xml, build.gradle, or CI config).
-- Return a concise summary of what you changed and whether tests/linter
-  passed or failed.
-```
-
-Wait for the sub-agent to complete. Increment the iteration counter, then go
-back to the **Review step**.
-
-Do not delete the fix plan file after fixes.
-
----
-
-## Phase 3 — Done
-
-Report to the user:
-
-> ✅ **Done!** The reviewer approved the implementation.
-> Here's a summary: <PASS message from reviewer>
-
-If the loop hit the 3-iteration limit without passing, instead report:
-
-> ⚠️ The review-fix loop reached 3 iterations without a clean pass.
-> Remaining issues:
-> <last FAIL message>
-> Please review manually.
-
-Write a git commit message (do not execute `git commit`) to `.git/GITGUI_MSG` file.
-If `.git/GITGUI_MSG` already exists, overwrite it.
+- Report result to user.
+- Write commit message to `.git/GITGUI_MSG`.

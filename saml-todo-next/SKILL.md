@@ -87,7 +87,7 @@ Invoke the `saml-plan` skill with context:
 The saml-plan skill will run its full process:
 1. Setup (grill-with-docs to clarify scope)
 2. Write plan to `.plan/YYYY-MM-DD-hh-mm-TICKET-ID.md`
-3. Review via saml-plan-review
+3. Internal review-fix loop (no separate saml-plan-review invocation)
 
 ### 5. If saml-plan passes — Invoke saml-implement (sub-agent)
 
