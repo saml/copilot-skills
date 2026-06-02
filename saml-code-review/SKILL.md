@@ -2,7 +2,7 @@
 name: saml-code-review
 description: >
   Reviews the codebase end-to-end using improve-codebase-architecture, stores the HTML report
-  to .todo/, generates and updates todos.json, and lets you work through items with
+  to .todo/, generates and updates .todo/todo.csv, and lets you work through items with
   saml-plan and saml-implement.
 ---
 
@@ -71,7 +71,7 @@ Use the glossary terms exactly: **module, interface, implementation, depth, deep
 
 ## Phase 4 — Generate Todo Items
 
-Read the HTML report and the raw code findings. Generate one `.todo/NN-TICKET-ID.md` file per actionable item, and update `todos.json` at the repo root.
+Read the HTML report and the raw code findings. Generate one `.todo/NN-TICKET-ID.md` file per actionable item, and update `.todo/todo.csv`.
 
 ### Todo item file format
 
@@ -96,20 +96,27 @@ clean-code | architecture | kotlin-idiom | android-pattern
 ## Status: pending
 ```
 
-### todos.json format
+### .todo/todo.csv format
 
-```json
-{
-  "todos": [
-    {
-      "id": "NN-ticket-id",
-      "title": "Short title",
-      "description": "One-liner from problem",
-      "status": "pending | in_progress | done | blocked",
-      "severity": "critical | high | medium | low"
-    }
-  ]
-}
+```csv
+id,title,description,status,severity
+NN-ticket-id,Short title,One-liner from problem,pending,critical
+```
+
+Write it with Python:
+
+```python
+import csv
+
+SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+
+rows = [{"id": "01-x", "title": "...", "description": "...", "status": "pending", "severity": "critical"}]
+rows.sort(key=lambda r: (SEVERITY_ORDER.get(r["severity"], 9), r["id"]))
+
+with open(".todo/todo.csv", "w", newline="") as f:
+    writer = csv.DictWriter(f, fieldnames=["id", "title", "description", "status", "severity"])
+    writer.writeheader()
+    writer.writerows(rows)
 ```
 
 Ordering: critical first, then high, medium, low. Within each group, by id/number.
@@ -126,7 +133,7 @@ Ordering: critical first, then high, medium, low. Within each group, by id/numbe
 
 Report:
 - Path to the HTML report (`.todo/YYYY-MM-DD-architecture-review.html`)
-- Path to `todos.json`
+- Path to `.todo/todo.csv`
 - Count by severity
 - First critical item ready to work on
 
@@ -134,7 +141,7 @@ Example:
 > ✅ Code review complete.
 >
 > **HTML Report**: `.todo/2026-05-31-architecture-review.html`
-> **Todo list**: `todos.json` (4 critical, 3 high, 4 medium, 1 low)
+> **Todo list**: `.todo/todo.csv` (4 critical, 3 high, 4 medium, 1 low)
 >
 > Start with `saml-plan` for `01-nullable-deps-crash` (fix ItemListViewModel nullable deps).
 
@@ -142,17 +149,58 @@ Example:
 
 ## Working Through Todos
 
-To work on a specific todo:
-1. `saml-plan` → creates `.plan/YYYY-MM-DD-hh-mm-TICKET-ID.md`
-2. `saml-implement` → implements from the plan, reviews, fixes
-3. Mark done in `todos.json`
+To automatically work through todos, do the following in a loop:
+1. Pick the next pending item from `.todo/todo.csv` (start with critical).
+2. `saml-plan` → creates `.plan/YYYY-MM-DD-hh-mm-TICKET-ID.md`
+3. `saml-implement` → implements from the plan, reviews, fixes. Only if `saml-plan` was successful. Otherwise, halt.
+4. Mark done in `.todo/todo.csv` only if `saml-implement` was successful. Otherwise, halt.
+5. Execute `git add .` and `git commit --file .git/GITGUI_MSG` to create a commit, only if it's successful so far. Otherwise, halt.
 
 To mark done manually:
-```bash
-jq '.todos[] | select(.id == "01-nullable-deps-crash") | .status = "done"' todos.json | sponge todos.json
+```python
+import csv, tempfile, os
+
+target_id = "01-nullable-deps-crash"
+new_status = "done"
+fieldnames = ["id", "title", "description", "status", "severity"]
+updated = False
+tmp_path = None
+
+with open(".todo/todo.csv", newline="") as f:
+    rows = list(csv.DictReader(f))
+
+for r in rows:
+    if r["id"] == target_id:
+        r["status"] = new_status
+        updated = True
+
+if not updated:
+    raise ValueError(f"ID '{target_id}' not found")
+
+try:
+    with tempfile.NamedTemporaryFile("w", dir=".todo", delete=False, newline="", suffix=".csv") as tmp:
+        tmp_path = tmp.name
+        writer = csv.DictWriter(tmp, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    os.replace(tmp_path, ".todo/todo.csv")
+except Exception:
+    if tmp_path and os.path.exists(tmp_path):
+        os.unlink(tmp_path)
+    raise
 ```
 
 To view current status:
-```bash
-cat todos.json | jq '.todos[] | "\(.severity) [\(.status)] \(.id) - \(.title)"'
+```python
+import csv
+
+SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+
+with open(".todo/todo.csv", newline="") as f:
+    rows = sorted(csv.DictReader(f), key=lambda r: (SEVERITY_ORDER.get(r["severity"], 9), r["id"]))
+for r in rows:
+    print(f'{r["severity"]} [{r["status"]}] {r["id"]} - {r["title"]}')
 ```
+
+Tackle the next todo item one by one until all items are done.
