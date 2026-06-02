@@ -30,7 +30,12 @@ description: >
 
 ## Phase 3 — Review-Fix Loop
 
-Launch a sync sub-agent (default model) to review the plan:
+Launch a **general-purpose sub-agent** (fresh context window) to review the plan.
+The reviewer must NOT share context with the planning phase — pass all context explicitly in the prompt:
+
+- The full plan file contents
+- Relevant codebase context (AGENTS.md, project conventions)
+- The original user request/goal
 
 > Review this plan for simplicity, completeness, correctness, and actionability.
 > Return PASS or FAIL with specific issues.

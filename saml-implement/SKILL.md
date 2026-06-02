@@ -22,7 +22,12 @@ description: >
 
 ## Phase 2 — Review-Fix Loop
 
-Launch background sub-agent (general-purpose agent type) to review:
+Launch a **general-purpose sub-agent** (fresh context window) to review.
+The reviewer must NOT inherit the implementation agent's context — pass all context explicitly in the prompt:
+
+- The full plan file contents
+- A summary or diff of what was implemented
+- Relevant codebase context (AGENTS.md, project conventions)
 
 > Review the implementation against the plan.
 > Verify tests exist and are high quality.
