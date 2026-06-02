@@ -8,9 +8,11 @@ description: >
 
 # saml-todo-next Skill
 
-Fully automated end-to-end execution of a single todo item: plan → implement → commit → done.
+Loops through ALL pending todo items until none remain. Each item goes through: plan → implement → commit → done.
 
 ## Process
+
+**LOOP**: Repeat steps 1–7 until no pending items remain. Each iteration processes one item and creates one commit.
 
 ### 1. Find the next pending item
 
@@ -28,6 +30,8 @@ with open(".todo/todo.csv", newline="") as f:
 pending.sort(key=lambda r: (SEVERITY_ORDER.get(r["severity"], 9), r["id"]))
 next_item = pending[0] if pending else None
 ```
+
+**If `next_item` is None → all items are done. Print summary and stop.**
 
 ### 2. Read the detail file
 
@@ -109,11 +113,15 @@ git add . && git commit --file .git/GITGUI_MSG
 
 Reuse the update snippet above with `new_status = "done"`.
 
+**→ Go back to Step 1 (next iteration of the loop).**
+
 ### Error Handling
 
-- If saml-plan fails: leave item as `in_progress`, report the review file for the user to address.
-- If saml-implement fails after iteration limit: report remaining issues, do not commit, leave as `in_progress`.
-- If git commit fails: report error, leave as `in_progress`.
+- If saml-plan fails: leave item as `in_progress`, **stop the loop**, report the review file for the user to address.
+- If saml-implement fails after iteration limit: **stop the loop**, report remaining issues, do not commit, leave as `in_progress`.
+- If git commit fails: **stop the loop**, report error, leave as `in_progress`.
+
+On any error, output a summary of what was completed (items done) and what remains (items still pending/in_progress).
 
 ## Workflow reference
 
@@ -124,5 +132,6 @@ From `saml-code-review` — "Working Through Todos":
 > 3. `saml-implement` → implements from the plan, reviews, fixes. Only if `saml-plan` was successful.
 > 4. Mark done in `.todo/todo.csv` only if `saml-implement` was successful.
 > 5. Execute `git add .` and `git commit --file .git/GITGUI_MSG` to create a commit, only if successful.
+> 6. Repeat from step 1 until no pending items remain.
 
-`saml-todo-next` now handles all steps 1-5 automatically. User only invokes `saml-todo-next`.
+`saml-todo-next` handles all steps 1-6 automatically. User only invokes `saml-todo-next` once and it processes every pending item, one commit per item.
