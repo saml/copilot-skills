@@ -30,7 +30,7 @@ description: >
 
 ## Phase 3 — Review-Fix Loop
 
-Launch a **general-purpose sub-agent** (fresh context window) to review the plan.
+Launch a **general purpose sub-agent** (fresh context window) to review the plan. Pick the model using `saml-model` skill.
 The reviewer must NOT share context with the planning phase — pass all context explicitly in the prompt:
 
 - The full plan file contents

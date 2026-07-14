@@ -12,7 +12,7 @@ description: >
 - Use `saml-latest-planfile` skill to find the latest plan file, or use given path.
   If no plan file found, stop: "❌ No plan file found. Run `saml-plan` first."
 - Read the plan file contents fully.
-- Launch a **task sub-agent** (task agent type. fresh context window) to implement.
+- Launch a **task sub-agent** (task agent type. fresh context window) to implement. Use `saml-model` skill to pick the model.
   The implementer must NOT inherit your context — pass all context explicitly in the prompt:
 
   - The full plan file contents (verbatim)
@@ -28,7 +28,8 @@ description: >
 
 ## Phase 2 — Review-Fix Loop
 
-Launch a **general-purpose sub-agent** (fresh context window) to review.
+Launch a **general purpose sub-agent** (fresh context window) to review.
+Use `saml-model` skill to pick the model.
 The reviewer must NOT inherit the implementation agent's context — pass all context explicitly in the prompt:
 
 - The full plan file contents
@@ -49,4 +50,4 @@ The reviewer must NOT inherit the implementation agent's context — pass all co
 ## Done
 
 - Report result to user.
-- Write commit message to `.git/GITGUI_MSG`.
+- Write commit message to `.git/GITGUI_MSG`. Use `saml-commit-message` skill to generate the commit message.
