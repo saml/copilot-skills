@@ -23,3 +23,4 @@ If jira ticket is not found, omit the `<jira-ticket>` and `<jira-ticket-url>` li
 
 Get jira ticket using `saml-jira-ticket` skill.
 Get jira ticket url using `saml-jira-ticket-url` skill.
+Write the message to `.git/GITGUI_MSG` file.
